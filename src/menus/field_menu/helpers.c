@@ -82,10 +82,15 @@ s32 STSTATUS_listItemsOfKind(s32 kind, s16 *out) {
    partners has a bit per partner; kind 1 can't go in slot 3, nor 2 in slot 2 */
 s32 STSTATUS_canEquip(s32 partner, s32 slot, s32 item) {
     ItemData *data;
+    u16 partnerMask;
 
     if (item != -1) {
         data = ITEM_FUNCS.get(item)->data.record;
-        if (!((data->weapon.partners >> partner) & 1)) {
+        /* Byte 0x05 was alignment padding in all three equipment records.
+           Reuse it as the upper half of a 16-bit compatibility mask without
+           changing any record size or the offsets of the following fields. */
+        partnerMask = data->weapon.partners | ((u16)data->weapon.partnersHigh << 8);
+        if (partner < 0 || partner >= 16 || !((partnerMask >> partner) & 1)) {
             return 0;
         }
         if (data->weapon.kind == EQUIP_KIND_RIGHT_HAND) {
