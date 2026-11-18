@@ -166,3 +166,19 @@ Committed two source changes on `gabumon-mod-development`:
 Commits: `55e27fe1` (record definitions) and `4e8083bc` (equipment check).
 
 Validation status: source changes were fetched back from the branch and inspected. They have **not** been compiled or emulator-tested in this environment. The source change alone does not add partner slots or create new equipment records; the 15-partner roster/save work remains necessary.
+
+## Evolution tier rewrite
+
+The USA evolution data contains 8 partner-specific lists of 44 targets each. The target indices are consistently grouped by evolution stage: 9-19 (Champion), 20-32 (Ultimate), and 33-52 (Mega). The runtime unlock function now uses those tiers and the partner's own level:
+
+- Champion: level 5
+- Ultimate: level 20
+- Mega: level 40
+
+The original target ordering is retained. The old prerequisite-Digimon level checks and battle-stat/resistance checks are no longer used by `STFGTREP_learnDigimon`. As in the original routine, it grants the first eligible target not already owned and puts it in the first available battle slot. This is a source-level change only; it has not yet been compiled or tested in an emulator.
+
+Commit: `5cb1dde3` (`src/battle/report/growth.c`).
+
+## Original USA image received
+
+The user supplied the USA disc archive. Its extracted BIN SHA-1 is `f0b022f9be53cbce14640abd8f01beaadcb35208`, matching the known USA image used for this project. The accompanying CUE identifies a single MODE2/2352 track. This verifies the input image; it does not mean a patched disc image has been built.
