@@ -50,6 +50,26 @@ Weapon, armour, and accessory records each contain an 8-bit `partners` mask. Thi
 
 The gym uses partner-specific animation and growth data. The seven-frame `PartnerAnim` type is not itself the only requirement: the gym overlay's selection, growth, and result paths must all accept the expanded partner IDs and preserve the resulting stat changes.
 
+### Evolution unlock implementation (source verified)
+
+The exact unlock path is `STFGTREP_learnDigimon` in `src/battle/report/growth.c`. It scans 44 rows in `STFGTREP_evolutions[partner]` and, for each not-yet-owned Digimon, currently:
+
+1. Checks up to two prerequisite Digimon IDs and their individual `PartnerEntry.level` values (`needs[2]`).
+2. Checks `Evolution.stat` against one of the partner's six battle stats, the partner's level (`stat == 7`), or one of seven resistances.
+3. Adds the Digimon to the partner's entries and first free one of three evolution slots.
+
+The `Evolution` record is 16 bytes: target index, two `(digimon, level)` prerequisites, stat selector, and minimum value. The USA data defines eight lists of 44 records in `src/battle/report/data/stfgtrep.c`. Simply changing the shared function to ignore `stat` would still leave the two prerequisite-Digimon gates intact. Deleting all checks without a replacement tier rule would unlock unrelated Digimon immediately and would not implement Champion/Ultimate/Mega progression.
+
+The safe change must preserve the target choices in all eight lists while replacing both kinds of conditions with a tier-derived partner-level threshold (5/20/40). The table's target IDs need to be classified into Champion, Ultimate, and Mega before rewriting the conditions. This classification is a required data-audit step, not something inferred from the row number. The current list's `stat == 7` records already encode some level thresholds (5/20/40), but other rows encode stat gates and prerequisite Digimon gates.
+
+### Gym animation path (source verified)
+
+`include/menus/gym.h` declares `STGTRAIN_waitAnims[PARTNER_COUNT][7]`. `src/menus/gym/screen.c` indexes this table directly with the partner returned by `GAME.funcs.getPartyMember` both for the selected Digimon and the party strip. The gym therefore needs a valid seven-frame entry for every added partner; a lab sprite entry alone will not make the gym display correctly. The training result code computes gains from the selected partner's `DIGIMON_DATA` growth record and writes the result into that partner's persistent stats, so the new partner's growth record must be valid as well.
+
+### Lab partner-screen animation path (source verified)
+
+`include/menus/digimon_lab.h` stores the outside-party partner list as `s32 partners[PARTNER_COUNT]`, and `src/menus/digimon_lab/lab.c` supplies `STGDGLAB_partnerAnims` for the partner-indexed sprites. The lab's party screen and gym both directly index partner-sized arrays; expanding the roster requires coordinated dimensions and frame IDs in both overlays.
+
 ## Asset status
 
 The USA data archive contains `AAA/DAT/FIELD/SPRT/P088GABS.BIN` (2,224 bytes), which is a candidate Gabumon field/NPC asset. Its exact frame set and suitability as a walking-follow sprite have not yet been established. It is not evidence of a complete walk-cycle.
