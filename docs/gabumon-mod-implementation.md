@@ -156,3 +156,13 @@ Do not widen `PARTNER_COUNT` as an isolated first edit. The same index is used t
 ### Confirmed scope expansion
 
 Gabumon's portrait animation must be supplied in at least three separate menu contexts: field/status menu, gym, and Digimon Lab. The existing town NPC sprite is only a potential source for the overworld appearance; it does not satisfy these menu portrait requirements or prove a complete walk cycle.
+## First runtime source change: 16-bit equipment partner masks
+
+Committed two source changes on `gabumon-mod-development`:
+
+- `include/engine/game_state.h`: named byte offset `0x05` as `partnersHigh` in `WeaponData`, `ArmorData`, and `AccessoryData`. This byte was alignment padding in all three layouts; the following fields retain their original offsets and the record sizes remain unchanged.
+- `src/menus/field_menu/helpers.c`: `STSTATUS_canEquip` now combines the low and high bytes into a 16-bit mask and safely rejects indices outside 0-15. Existing original-game records have a zero high byte, so their current compatibility bits retain their meaning. New partner-compatible equipment records can set bits 8-14 in the high byte.
+
+Commits: `55e27fe1` (record definitions) and `4e8083bc` (equipment check).
+
+Validation status: source changes were fetched back from the branch and inspected. They have **not** been compiled or emulator-tested in this environment. The source change alone does not add partner slots or create new equipment records; the 15-partner roster/save work remains necessary.
