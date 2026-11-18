@@ -123,11 +123,11 @@ s32 STFGTREP_addExp(s32 partner, s32 exp) {
     return leveled;
 }
 
-/* Gives a partner the first Digimon of its evolution list (STFGTREP_evolutions)
-   it hasn't yet and whose needs it meets: the Digimon it must have at a
-   level, and a stat (1-6 battle stats, 7 the level, 8-14 resistances) of at
-   least a value. The Digimon also takes the first free slot (below 3); the
-   Digimon, or 0 */
+/* Gives a partner the first Digimon of its evolution list whose tier is
+   unlocked by the partner's level. The existing list order and targets are
+   preserved; its former stat and prerequisite-Digimon gates are ignored.
+   The game's evolution data is grouped by stage: indices 9-19 Champion,
+   20-32 Ultimate and 33-52 Mega. The new level gates are 5, 20 and 40. */
 s32 STFGTREP_learnDigimon(s32 partner) {
     PartnerEntry entry;
     s16 slots[3];
@@ -135,46 +135,27 @@ s32 STFGTREP_learnDigimon(s32 partner) {
     Evolution *list;
     s32 n;
     s32 id;
-    s32 i;
+    s32 requiredLevel;
     s32 j;
 
+    stats = GAME.funcs.getPartnerStats(partner);
     list = STFGTREP_evolutions[partner];
     for (n = 0; n < 44; n++) {
+        if (list[n].digimon < 9 || list[n].digimon > 52) {
+            continue;
+        }
+        if (list[n].digimon <= 19) {
+            requiredLevel = 5;
+        } else if (list[n].digimon <= 32) {
+            requiredLevel = 20;
+        } else {
+            requiredLevel = 40;
+        }
+        if (stats->stats[STAT_LEVEL] < requiredLevel) {
+            continue;
+        }
         id = DIGIMON_DATA[list[n].digimon - 1].id;
         if (GAME.funcs.getPartnerEntry(partner, id, &entry) >= 0 || id <= 0) {
-            continue;
-        }
-        for (i = 0; i < 2; i++) {
-            if (list[n].needs[i].digimon != 0) {
-                if (GAME.funcs.getPartnerEntry(partner, DIGIMON_DATA[list[n].needs[i].digimon - 1].id, &entry) == -1) {
-                    id = -1;
-                } else if (entry.level < list[n].needs[i].level) {
-                    id = -1;
-                }
-            }
-        }
-        if (id <= 0) {
-            continue;
-        }
-        if (list[n].stat != 0) {
-            stats = GAME.funcs.getPartnerStats(partner);
-            /* pointer sums, not stats[stat + 5]: the match depends on them,
-               which add the 5 and the 4 to the load's offset */
-            if (list[n].stat < 7) {
-                if (*(stats->stats + list[n].stat + 5) < list[n].value) {
-                    id = -1;
-                }
-            } else if (list[n].stat == 7) {
-                if (stats->stats[STAT_LEVEL] < list[n].value) {
-                    id = -1;
-                }
-            } else if (list[n].stat >= 8) {
-                if (*(stats->stats + list[n].stat + 4) < list[n].value) {
-                    id = -1;
-                }
-            }
-        }
-        if (id <= 0) {
             continue;
         }
         GAME.funcs.addPartnerEntry(partner, id);
