@@ -145,7 +145,8 @@ typedef struct WeaponData {
     /* 0x00 */ s16 charisma; /* what it adds to STAT_CHARISMA (computeStats); armour and accessories too */
     /* 0x02 */ u8 kind; /* EQUIP_KIND_* */
     /* 0x03 */ u8 group;
-    /* 0x04 */ u8 partners; /* 1 << partner for each partner who can equip it (STSTATUS_canEquip) */
+    /* 0x04 */ u8 partners; /* low byte: partners 0-7 */
+    /* 0x05 */ u8 partnersHigh; /* formerly alignment padding: partners 8-15 */
     /* 0x06 */ u16 amounts[2]; /* what it adds to stats[] */
     /* 0x0A */ u16 atk;
     /* 0x0C */ u8 stats[2];
@@ -163,7 +164,8 @@ typedef struct ArmorData {
     /* 0x00 */ s16 charisma;
     /* 0x02 */ u8 kind;
     /* 0x03 */ u8 group;
-    /* 0x04 */ u8 partners;
+    /* 0x04 */ u8 partners; /* low byte: partners 0-7 */
+    /* 0x05 */ u8 partnersHigh; /* formerly alignment padding: partners 8-15 */
     /* 0x06 */ u16 amounts[2];
     /* 0x0A */ u8 stats[2];
     /* 0x0C */ s16 def;
@@ -178,7 +180,8 @@ typedef struct AccessoryData {
     /* 0x0 */ s16 charisma;
     /* 0x2 */ u8 kind; /* EQUIP_KIND_ACCESSORY or EQUIP_KIND_GROUP_ACCESSORY */
     /* 0x3 */ u8 group;
-    /* 0x4 */ u8 partners;
+    /* 0x4 */ u8 partners; /* low byte: partners 0-7 */
+    /* 0x5 */ u8 partnersHigh; /* formerly alignment padding: partners 8-15 */
     /* 0x6 */ u16 amount;
     /* 0x8 */ u8 stat;
     /* 0x9 */ u8 pad[3]; /* 0 on every accessory; never read: ACCESSORY_DATA's entries are 0xC bytes */
