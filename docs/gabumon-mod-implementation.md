@@ -138,3 +138,21 @@ A release candidate is blocked until the PS1 toolchain and all required source/d
 8. Generate a patch against the unmodified USA BIN and publish checksums plus emulator test results.
 
 Do not mark a step complete until its source changes and tests are present.
+
+## Additional audit: equipment and partner portrait paths (2026-11-18)
+
+Further source inspection confirms the eight-partner limit affects more than the save structure:
+
+- `src/menus/field_menu/helpers.c`, `STSTATUS_canEquip`, checks `(data->weapon.partners >> partner) & 1`. The `partners` field is a `u8` shared by weapon, armor, and accessory records. Partner indices 8-14 cannot be represented by the current mask. This is a real runtime gate, not just an editor/data limitation.
+- `src/menus/field_menu/helpers.c` defines `STSTATUS_partnerAnims[]` with exactly eight portrait animation records. The status/field menu therefore needs its own Gabumon-and-future-partner animation entries, separate from the gym and Digimon Lab tables.
+- `include/menus/field_menu.h` exposes the field-menu helper interface; the animation pointer is part of `StatusData`, so adding entries must preserve the expected table ordering and sprite archive frame IDs.
+- `src/menus/digimon_lab/party_screen.c` indexes `STGDGLAB_data.anim[member]` while drawing both the selected outside-party partner and the active party. Every partner index must have a valid animation record before the menu can safely display it.
+- `include/menus/memory_card.h` confirms the USA save format is version 3 and copies the first `GAME_SAVE_SIZE` bytes of `GameState` as one contiguous block. A roster expansion changes that serialized block; it needs an explicit version bump and a deliberate old-save migration/rejection path, not merely a larger array.
+
+### Implementation consequence
+
+Do not widen `PARTNER_COUNT` as an isolated first edit. The same index is used to address the partner records, initialize partner data, render field-menu portraits, render Lab and gym animations, enumerate partners for events, and test equipment compatibility. The item data records are also loaded from the original game's data archives, so an extended equipment mask requires coordinated runtime and data-format work. The safe implementation should centralize partner capability checks behind a helper, define an extended mask representation, and audit every partner-indexed animation/data table before enabling indices 8-14.
+
+### Confirmed scope expansion
+
+Gabumon's portrait animation must be supplied in at least three separate menu contexts: field/status menu, gym, and Digimon Lab. The existing town NPC sprite is only a potential source for the overworld appearance; it does not satisfy these menu portrait requirements or prove a complete walk cycle.
