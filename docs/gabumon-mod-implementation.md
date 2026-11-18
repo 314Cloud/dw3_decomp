@@ -96,6 +96,24 @@ The Lab party screen uses `screen->partners[screen->pick]` to select an animatio
 
 No gameplay source file was changed in this audit pass. In particular, no speculative evolution rewrite or `PARTNER_COUNT` increase was committed: the stage classification, new Digimon records/assets, save-extension design, and equipment-mask migration are not yet defined well enough to preserve original gameplay and saves safely.
 
+### Equipment mask audit (source verified)
+
+`WeaponData.partners`, `ArmorData.partners`, and `AccessoryData.partners` are each one byte at offset 0x04 in their respective records. `STSTATUS_canEquip` interprets this as `1 << partner`. This is a hard data-format limit: only partner indices 0–7 can be represented. The records are loaded from the item data archive and are read byte-by-byte by overlays, so widening the C member alone would shift record layouts and break the archive parser. A 15-partner implementation needs an extension mapping or a coordinated archive-format and reader change; it must also update the equipment UI's filtering and equip validation.
+
+### Confirmed roster consumers beyond the Lab and gym
+
+`initNewGameData` uses `PARTNER_COUNT` to initialise one `Partner` record from each leading `DIGIMON_DATA` row. `setParty` and starter packs unlock selected indices, while other loops use `PARTNER_COUNT` to scan unlocked partners and unequip items. `BattleReport` exposes partner-indexed evolution and animation pointers, and its report panel stores only three active party members, which is consistent with keeping `PARTY_SIZE` at three. These usages confirm that adding Gabumon as a ninth partner must be paired with its new `DIGIMON_DATA` template and all corresponding partner-indexed resources; changing the enum by itself is not a safe intermediate state.
+
+### Work completed in this pass
+
+- Added the evolution structure and gate behavior audit.
+- Recorded the exact USA save growth (seven extra Partner records add 0x1A14 bytes before later GameState fields).
+- Recorded compiled USA Lab/gym animation table sizes and their sprite archive dependency.
+- Recorded the new-game initialization dependency on the first `PARTNER_COUNT` Digimon data rows.
+- Recorded the 8-bit equipment mask limitation and why widening the struct alone is unsafe.
+
+No executable gameplay code or game data was changed in this pass.
+
 ## Asset status
 
 The USA data archive contains `AAA/DAT/FIELD/SPRT/P088GABS.BIN` (2,224 bytes), which is a candidate Gabumon field/NPC asset. Its exact frame set and suitability as a walking-follow sprite have not yet been established. It is not evidence of a complete walk-cycle.
