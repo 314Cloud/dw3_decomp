@@ -70,6 +70,32 @@ The safe change must preserve the target choices in all eight lists while replac
 
 `include/menus/digimon_lab.h` stores the outside-party partner list as `s32 partners[PARTNER_COUNT]`, and `src/menus/digimon_lab/lab.c` supplies `STGDGLAB_partnerAnims` for the partner-indexed sprites. The lab's party screen and gym both directly index partner-sized arrays; expanding the roster requires coordinated dimensions and frame IDs in both overlays.
 
+## Follow-up source audit (November 2026)
+
+### Evolution records do not carry a Digimon stage field
+
+`DigimonData` is 0x57 bytes and contains combat values, techniques, growth, blast-form IDs, name ID, and family; it has no Champion/Ultimate/Mega rank field. `Evolution` is 0x10 bytes and contains a target `DIGIMON_DATA` index plus two prerequisite Digimon/level pairs and a stat selector/value. Therefore a correct level-only policy needs an explicit, reviewed tier classification for every target in each partner's 44-row evolution list (or a carefully designed classification table). It cannot safely infer tier from an absent `DigimonData` field or from row position.
+
+The shared `STFGTREP_learnDigimon` loop returns after learning the first eligible row, so list order is gameplay-significant. A future implementation must preserve each partner's intended target ordering while checking the target's tier threshold. It must also decide whether the existing prerequisite Digimon requirements are removed, as requested by the global stat-gate removal, rather than merely bypassing the stat selector.
+
+### Save growth calculation for 15 partners
+
+The current `Partner` record is 0x3DC bytes (`pad[4]`, `unlocked`, and `PartnerStats`); the eight records occupy 0x1EE0 bytes from 0x075C through 0x263B. Seven more records would add 0x1A14 bytes before `GameState.progress`, moving every subsequent saved field unless the design instead stores the extra partners in a separate extension block. The current USA save is 0x26BC bytes and version 3. This confirms that simply changing `PARTNER_COUNT` would invalidate the documented GameState offsets and the fixed-size `GameSave`/`SaveData` representation.
+
+### More fixed-size screens and the actual animation-table footprint
+
+The USA symbol map records `STGDGLAB_partnerAnims` as 0xE0 bytes, exactly eight 0x1C-byte `PartnerAnim` records (seven 32-bit frame IDs each). `STGTRAIN_waitAnims` is likewise 0xE0 bytes, eight rows of seven 32-bit frame IDs. Those are actual compiled-data footprints, not merely declarations. Extending either table to 15 entries changes overlay data size and potentially its linker/symbol layout; each row also requires sprite IDs that exist in that overlay's loaded sprite archive.
+
+The Lab party screen uses `screen->partners[screen->pick]` to select an animation by partner index and also uses `GAME.funcs.getPartyPartner(i)` for the three active party slots. The three active party slots can remain three, but the partner-indexed animation storage must cover all unlocked partners.
+
+### Initialisation constraint
+
+`initNewGameData` loops from zero to `PARTNER_COUNT - 1`, indexes `DIGIMON_DATA[i]`, and copies the corresponding name, base stats, and resistances into each partner record. The current data declaration has 55 rows total: eight partner definitions, 44 other Digimon, and three placeholders. Expanding the partner count without first adding and validating the four new partner definitions would make new-game initialization consume unrelated existing Digimon records as partner templates.
+
+### Decision recorded
+
+No gameplay source file was changed in this audit pass. In particular, no speculative evolution rewrite or `PARTNER_COUNT` increase was committed: the stage classification, new Digimon records/assets, save-extension design, and equipment-mask migration are not yet defined well enough to preserve original gameplay and saves safely.
+
 ## Asset status
 
 The USA data archive contains `AAA/DAT/FIELD/SPRT/P088GABS.BIN` (2,224 bytes), which is a candidate Gabumon field/NPC asset. Its exact frame set and suitability as a walking-follow sprite have not yet been established. It is not evidence of a complete walk-cycle.
